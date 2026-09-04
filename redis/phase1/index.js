@@ -3,13 +3,14 @@ import dotenv from "dotenv";
 import connectDb from "./lib/db.js";
 import User from "./model/user.model.js";
 import Redis from "ioredis";
+import rateLimitter from "./middleware/ratelimit.js";
 dotenv.config();
 
 
 const port = process.env.PORT || 5000
 
 
-const redis = new Redis(process.env.REDIS_URL)
+export const redis = new Redis(process.env.REDIS_URL)
 const app = express();
 
 app.use(express.json())
@@ -42,7 +43,7 @@ app.get('/get', async (req, res) => {
 })
 
 //make redis get api
-app.get('/redis-get', async (req, res) => {
+app.get('/redis-get', rateLimitter, async (req, res) => {
 
     const cache = await redis.get("user:all")
 
