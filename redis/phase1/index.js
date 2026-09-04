@@ -29,7 +29,7 @@ app.post('/create', async (req, res) => {
 })
 
 //make get api
-app.post('/create', async (req, res) => {
+app.get('/get', async (req, res) => {
 
     const user = await User.find({})
 
