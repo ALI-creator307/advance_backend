@@ -4,6 +4,8 @@ import connectDb from "./lib/db.js";
 import User from "./model/user.model.js";
 import Redis from "ioredis";
 import rateLimitter from "./middleware/ratelimit.js";
+import sendEmail from "./lib/sendEmail.js";
+import emailQueue from "./queue.js";
 dotenv.config();
 
 
@@ -29,6 +31,7 @@ app.post('/create', async (req, res) => {
         name, email, pass
     })
 
+    emailQueue.add("send-email", { email })
     return res.json(user)
 
 })

@@ -16,7 +16,7 @@ This repo is continuously updated as I learn each topic.
 - Docker Networking
 - Docker Volumes
 
-### Redis
+### Redis — ✅ Completed
 - API Caching
 - Rate Limiting
 - Message Queues
