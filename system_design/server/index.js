@@ -10,6 +10,7 @@ dotenv.config();
 
 
 const port = process.env.PORT || 7000
+const serverName = process.env.SERVER_NAME || `server ${port}`
 
 
 export const redis = new Redis(process.env.REDIS_URL)
@@ -18,7 +19,7 @@ const app = express();
 app.use(express.json())
 
 app.get('/', (req, res) => {
-    return res.status(200).json({ msg: "route is workng" })
+    return res.status(200).json({ msg: `hello from ${serverName}` })
 })
 
 //make create api

@@ -6,9 +6,29 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
 
-  server:
+  server1:
     build: ./server
+    environment:
+      - SERVER_NAME=server 1
     env_file:
       - ./server/.env
     ports:
-      - 5000:7000
+      - 5001:7000
+
+  server2:
+    build: ./server
+    environment:
+      - SERVER_NAME=server 2
+    env_file:
+      - ./server/.env
+    ports:
+      - 5002:7000
+
+  server3:
+    build: ./server
+    environment:
+      - SERVER_NAME=server 3
+    env_file:
+      - ./server/.env
+    ports:
+      - 5003:7000
