@@ -3,3 +3,4 @@ node_modules/
 .env
 .DS_Store
 redis/phase1/.env
+system_design/server/.env
