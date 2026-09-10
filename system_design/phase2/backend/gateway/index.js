@@ -11,12 +11,12 @@ const app = express();
 
 app.use(express.json())
 
-app.use('/auth', proxy('http://localhost:8001'))
-app.use('/order', proxy('http://localhost:8002'))
-app.use('/product', proxy('http://localhost:8003'))
+app.use('/auth', proxy('http://auth-service:8001'))
+app.use('/order', proxy('http://order-service:8002'))
+app.use('/product', proxy('http://product-service:8003'))
 
 app.get('/', (req, res) => {
-    return res.status(200).json({ msg: "hello from Gateway" })
+    return res.status(200).json({ msg: `hello from ${process.env.SERVER_NAME}` })
 })
 
 
