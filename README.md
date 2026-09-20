@@ -21,7 +21,7 @@ This repo is continuously updated as I learn each topic.
 - Rate Limiting
 - Message Queues
 
-### System Design
+### System Design — ✅ Completed
 - Scaling Concepts
 - Nginx
 - Microservices
