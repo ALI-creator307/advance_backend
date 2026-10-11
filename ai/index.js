@@ -5,6 +5,7 @@ import { ChatGroq } from '@langchain/groq'
 import { addMessages, Annotation, MessagesAnnotation, StateGraph } from '@langchain/langgraph';
 import { AIMessage } from '@langchain/core/messages';
 import { ToolNode } from "@langchain/langgraph/prebuilt";
+import { TavilySearch } from "@langchain/tavily";
 dotenv.config()
 
 const app = express()
@@ -50,12 +51,12 @@ const port = 5000
 
 // With LANGCHAIN
 
-const llm = new ChatGroq({
-    model: "openai/gpt-oss-120b",
-    temperature: 0.7,
-    maxTokens: 3000,
-    maxRetries: 2
-})
+// const llm = new ChatGroq({
+//     model: "openai/gpt-oss-120b",
+//     temperature: 0.7,
+//     maxTokens: 3000,
+//     maxRetries: 2
+// })
 
 
 /**
@@ -66,7 +67,7 @@ app.post('/ai', async (req, res) => {
     const response = await llm.invoke([
         {
             role: 'system',
-            content: "you are a senior software engineer at TECHLABS ,your name is ZEGAN"
+            content: "you are a senior software engineer at TECHLABS ,your name is ZEGAN and use tools where needed"
         },
         {
             role: 'human',
@@ -89,13 +90,30 @@ app.post('/ai', async (req, res) => {
 // })
 
 /**
+ * - TAVILY AI
+ */
+const tool = new TavilySearch({
+    maxResults: 5,
+    topic: "general",
+});
+
+/**
  * - Tools Array
  */
 
-const tools = []
+const tools = [tool]
 const toolNode = new ToolNode(tools)
 
 
+/**
+ * - LLM
+ */
+const llm = new ChatGroq({
+    model: "openai/gpt-oss-120b",
+    temperature: 0.7,
+    maxTokens: 3000,
+    maxRetries: 2
+}).bindTools(tools)
 
 /**
  * - Funtion to call LLM
@@ -107,12 +125,9 @@ const callLLM = async (state) => {
     const response = await llm.invoke([
         {
             role: 'system',
-            content: "you are a senior software engineer at TECHLABS ,your name is ZEGAN"
+            content: "you are a senior software engineer at TECHLABS ,your name is ZEGAN nad use tools where needed"
         },
-        {
-            role: 'human',
-            content: state.messages[0].content
-        }
+        ...state.messages
     ])
 
     return { messages: [response] }
@@ -123,16 +138,23 @@ const callLLM = async (state) => {
  * - Function for Conditional Edge
  */
 const shouldContinue = async (state) => {
+    const lastMessage = state.messages[state.messages.length - 1]
+
+    if (lastMessage.tool_calls.length > 0) {
+        return "tools"
+    } else {
+        return "__end__"
+    }
 
 }
 
 const graph = new StateGraph(MessagesAnnotation)
     .addNode("agent", callLLM)
-    // .addNode("tools", toolNode)
+    .addNode("tools", toolNode)
     .addEdge("__start__", "agent")
     .addEdge("agent", "__end__")
-    // .addEdge("tools", "agent")
-    // .addConditionalEdges("agent", shouldContinue)
+    .addEdge("tools", "agent")
+    .addConditionalEdges("agent", shouldContinue)
     .compile()
 
 /**
@@ -150,7 +172,7 @@ app.post('/langgraph-ai', async (req, res) => {
         ]
     })
 
-    return res.status(200).json({ "ai": response.messages[response.messages.length-1].content })
+    return res.status(200).json({ "ai": response.messages })
 
 })
 
