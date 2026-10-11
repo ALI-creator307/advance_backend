@@ -2,8 +2,9 @@ import express from 'express';
 import dotenv from 'dotenv'
 import { GoogleGenAI } from '@google/genai';
 import { ChatGroq } from '@langchain/groq'
-import { Annotation, StateGraph } from '@langchain/langgraph';
+import { addMessages, Annotation, MessagesAnnotation, StateGraph } from '@langchain/langgraph';
 import { AIMessage } from '@langchain/core/messages';
+import { ToolNode } from "@langchain/langgraph/prebuilt";
 dotenv.config()
 
 const app = express()
@@ -82,10 +83,18 @@ app.post('/ai', async (req, res) => {
  * - LANGGRAPH
  */
 
-const State = Annotation.Root({
-    prompt: Annotation(),
-    aiMsg: Annotation()
-})
+// const State = Annotation.Root({
+//     prompt: Annotation(),
+//     aiMsg: Annotation()
+// })
+
+/**
+ * - Tools Array
+ */
+
+const tools = []
+const toolNode = new ToolNode(tools)
+
 
 
 /**
@@ -102,18 +111,28 @@ const callLLM = async (state) => {
         },
         {
             role: 'human',
-            content: state.prompt
+            content: state.messages[0].content
         }
     ])
 
-    return {aiMsg: response.content}
+    return { messages: [response] }
 
 }
 
-const graph = new StateGraph(State)
+/**
+ * - Function for Conditional Edge
+ */
+const shouldContinue = async (state) => {
+
+}
+
+const graph = new StateGraph(MessagesAnnotation)
     .addNode("agent", callLLM)
+    // .addNode("tools", toolNode)
     .addEdge("__start__", "agent")
     .addEdge("agent", "__end__")
+    // .addEdge("tools", "agent")
+    // .addConditionalEdges("agent", shouldContinue)
     .compile()
 
 /**
@@ -122,9 +141,16 @@ const graph = new StateGraph(State)
 app.post('/langgraph-ai', async (req, res) => {
     const { input } = req.body
 
-    const response = await graph.invoke({prompt: input})
+    const response = await graph.invoke({
+        messages: [
+            {
+                role: "user",
+                content: input
+            }
+        ]
+    })
 
-    return res.status(200).json({"ai" : response})
+    return res.status(200).json({ "ai": response.messages[response.messages.length-1].content })
 
 })
 
