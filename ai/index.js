@@ -2,7 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv'
 import { GoogleGenAI } from '@google/genai';
 import { ChatGroq } from '@langchain/groq'
-import { addMessages, Annotation, MessagesAnnotation, StateGraph } from '@langchain/langgraph';
+import { addMessages, Annotation, MemorySaver, MessagesAnnotation, StateGraph } from '@langchain/langgraph';
 import { AIMessage } from '@langchain/core/messages';
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { TavilySearch } from "@langchain/tavily";
@@ -98,6 +98,11 @@ const tool = new TavilySearch({
 });
 
 /**
+ * - MEMORY SAVER
+ */
+const memory = new MemorySaver()
+
+/**
  * - Tools Array
  */
 
@@ -111,7 +116,7 @@ const toolNode = new ToolNode(tools)
 const llm = new ChatGroq({
     model: "openai/gpt-oss-120b",
     temperature: 0.7,
-    maxTokens: 3000,
+    maxTokens: 1000,
     maxRetries: 2
 }).bindTools(tools)
 
@@ -140,7 +145,7 @@ const callLLM = async (state) => {
 const shouldContinue = async (state) => {
     const lastMessage = state.messages[state.messages.length - 1]
 
-    if (lastMessage.tool_calls.length > 0) {
+    if (lastMessage?.tool_calls && lastMessage.tool_calls.length > 0) {
         return "tools"
     } else {
         return "__end__"
@@ -152,28 +157,34 @@ const graph = new StateGraph(MessagesAnnotation)
     .addNode("agent", callLLM)
     .addNode("tools", toolNode)
     .addEdge("__start__", "agent")
-    .addEdge("agent", "__end__")
     .addEdge("tools", "agent")
     .addConditionalEdges("agent", shouldContinue)
-    .compile()
+    .compile({checkpointer: memory})
 
 /**
  * - LANGGRAPH AI API
  */
 app.post('/langgraph-ai', async (req, res) => {
-    const { input } = req.body
+    try {
+        const { input, thread_id } = req.body
 
-    const response = await graph.invoke({
-        messages: [
-            {
-                role: "user",
-                content: input
-            }
-        ]
-    })
+        // Har new chat ke liye dynamic thread ya custom thread_id use karein
+        const currentThread = thread_id || `user_${Date.now()}`
 
-    return res.status(200).json({ "ai": response.messages })
+        const response = await graph.invoke({
+            messages: [
+                {
+                    role: "user",
+                    content: input
+                }
+            ]
+        }, { configurable: { thread_id: currentThread } })
 
+        return res.status(200).json({ "ai": response.messages[response.messages.length - 1].content })
+    } catch (error) {
+        console.error("API Error: ", error)
+        return res.status(500).json({ error: error.message })
+    }
 })
 
 app.get('/', (req, res) => {
