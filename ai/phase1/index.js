@@ -166,10 +166,7 @@ const graph = new StateGraph(MessagesAnnotation)
  */
 app.post('/langgraph-ai', async (req, res) => {
     try {
-        const { input, thread_id } = req.body
-
-        // Har new chat ke liye dynamic thread ya custom thread_id use karein
-        const currentThread = thread_id || `user_${Date.now()}`
+        const { input } = req.body
 
         const response = await graph.invoke({
             messages: [
@@ -178,7 +175,7 @@ app.post('/langgraph-ai', async (req, res) => {
                     content: input
                 }
             ]
-        }, { configurable: { thread_id: currentThread } })
+        }, { configurable: { thread_id: "user123" } })
 
         return res.status(200).json({ "ai": response.messages[response.messages.length - 1].content })
     } catch (error) {
