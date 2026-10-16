@@ -4,7 +4,10 @@ import { GoogleGenAI } from '@google/genai';
 import { ChatGroq } from '@langchain/groq';
 import fs from "fs"
 import { PDFParse } from 'pdf-parse';
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters"
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
+import { TaskType } from "@google/generative-ai";
+import {QdrantVectorStore} from "@langchain/qdrant"
 
 dotenv.config()
 
@@ -22,6 +25,21 @@ const llm = new ChatGroq({
     maxTokens: 1000,
     maxRetries: 2
 })
+
+/**
+ * - Embedding
+ */
+const embeddings = new GoogleGenerativeAIEmbeddings({
+  model: "gemini-embedding-001", // 768 dimensions
+  taskType: TaskType.RETRIEVAL_DOCUMENT,
+  title: "Document title",
+});
+
+
+const vectorStore = await QdrantVectorStore.fromExistingCollection(embeddings, {
+  url: process.env.QDRANT_URL,
+  collectionName: "advance-ai",
+});
 
 
 /**
@@ -50,7 +68,8 @@ const upload = async () => {
 
     // splitter
     const splitter = new RecursiveCharacterTextSplitter({
-        chunkSize: 1000
+        chunkSize: 1000,
+        chunkOverlap: 200
     })
     const docs = await splitter.createDocuments([text])
 
