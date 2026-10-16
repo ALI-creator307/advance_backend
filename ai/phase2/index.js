@@ -8,6 +8,7 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { TaskType } from "@google/generative-ai";
 import {QdrantVectorStore} from "@langchain/qdrant"
+import { HumanMessage } from '@langchain/core/messages';
 
 dotenv.config()
 
@@ -43,17 +44,6 @@ const vectorStore = await QdrantVectorStore.fromExistingCollection(embeddings, {
 
 
 /**
- * - LANGGRAPH AI API
- */
-app.post('/rag-ai', async (req, res) => {
-    const { input } = req.body
-
-    const response = await llm.invoke(input)
-
-    return res.status(200).json({ "ai": response.content })
-})
-
-/**
  * - UPLOAD PDF
  */
 const upload = async () => {
@@ -68,15 +58,42 @@ const upload = async () => {
 
     // splitter
     const splitter = new RecursiveCharacterTextSplitter({
-        chunkSize: 1000,
-        chunkOverlap: 200
+        chunkSize: 500,
     })
     const docs = await splitter.createDocuments([text])
+
+    await vectorStore.addDocuments(docs)
 
     console.log(docs)
 }
 
 upload()
+
+/**
+ * - LANGGRAPH AI API
+ */
+app.post('/rag-ai', async (req, res) => {
+    const { input } = req.body
+
+    const docs = await vectorStore.similaritySearch(input, 5)
+    const context = docs.map((d) => d.pageContent).join("/n")
+
+    const response = await llm.invoke([
+        {
+            role: "system",
+            content: `You are a RAG AI assistant.
+                STRICT RULES:
+                - Answer ONLY from context
+                Do not use outside knowledge
+                If answer not found say:
+                "I don't know from uploaded PDF."
+                Context:${context}`
+        },
+        new HumanMessage(input)
+    ])
+
+    return res.status(200).json({ai: response.content})
+})
 
 
 app.get('/', (req, res) => {

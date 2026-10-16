@@ -32,7 +32,7 @@ This repo is continuously updated as I learn each topic.
 - Deployment
 - Production Architecture
 
-### AI Engineering
+### AI Engineering — ✅ Completed
 - LLM Fundamentals
 - LangChain
 - RAG (Retrieval Augmented Generation)
